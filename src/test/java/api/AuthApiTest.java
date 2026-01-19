@@ -40,4 +40,13 @@ public class AuthApiTest extends BaseTest {
         Response response = clients.AuthClient.login(wrongPasswordUser);
         checkInvalidCredentialsError(response);
     }
+
+    @Test
+    @DisplayName("Вход с несуществующим логином")
+    public void loginWithNonExistentLoginError() {
+        User nonExistentUser = DataGenerator.getRandomUser();
+
+        Response response = loginUser(nonExistentUser);
+        checkInvalidCredentialsError(response);
+    }
 }

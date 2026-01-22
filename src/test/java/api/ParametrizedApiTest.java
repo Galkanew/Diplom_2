@@ -4,6 +4,7 @@ import helpers.DataGenerator;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
 import models.User;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -18,6 +19,17 @@ import static org.hamcrest.Matchers.equalTo;
 @RunWith(Parameterized.class)
 @DisplayName("Параметризированные тесты создания пользователя")
 public class ParametrizedApiTest extends BaseTest {
+
+    private static User existingUser;
+
+    @Before
+    public void setUp() {
+        // Создаем пользователя только один раз для всех тестов
+        if (existingUser == null) {
+            existingUser = DataGenerator.getRandomUser();
+            clients.UserClient.createUser(existingUser);
+        }
+    }
 
     private final User user;
     private final int expectedStatusCode;
@@ -65,6 +77,18 @@ public class ParametrizedApiTest extends BaseTest {
                         REQUIRED_FIELDS,
                         false,
                         "Создание пользователя без пароля"
+                },
+                {
+
+                       User.builder()
+                                .email(existingUser != null ? existingUser.getEmail() : "existing@example.com")
+                                .password("any_password")
+                                .name("Any Name")
+                                .build(),
+                        FORBIDDEN,
+                        USER_ALREADY_EXISTS,
+                        false,
+                        "Создание пользователя с уже существующим email"
                 }
         });
     }
@@ -72,7 +96,15 @@ public class ParametrizedApiTest extends BaseTest {
     @Test
     @DisplayName("Параметризированный тест создания пользователя")
     public void parametrizedCreateUserTest() {
-        Response response = clients.UserClient.createUser(user);
+        // Для теста с дубликатом email используем email существующего пользователя
+        User testUser = this.user;
+        if (testDescription.equals("Создание пользователя с уже существующим email") && existingUser != null) {
+            testUser = testUser.toBuilder()
+                    .email(existingUser.getEmail())
+                    .build();
+        }
+
+        Response response = clients.UserClient.createUser(testUser);
 
         response.then()
                 .statusCode(expectedStatusCode)
